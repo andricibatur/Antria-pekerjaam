@@ -1,115 +1,36 @@
-<!DOCTYPE html><html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Antrian Pekerjaan</title>
-  <link rel="manifest" href="manifest.json" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 { text-align: center; }.task {
-  background: #fff;
-  border: 1px solid #ccc;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: transform 0.3s ease, background-color 0.5s ease;
-  position: relative;
-}
-.task.done {
-  background-color: #d1ffd1;
-  text-decoration: line-through;
-}
-.task.shifted {
-  transform: translateX(-50px);
-}
-.task.alert {
-  background-color: #ffdddd;
-}
-.left {
-  flex-grow: 1;
-}
-.right {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-input[type="text"], input[type="time"] {
-  border: none;
-  background: transparent;
-  width: 100px;
-}
-input:focus {
-  background: #eef;
-  outline: none;
-}
-.shift-btn {
-  display: none;
-  background: #555;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.task.done .shift-btn {
-  display: inline-block;
-}
-table {
-  width: 100%;
-  margin-top: 30px;
-  border-collapse: collapse;
-}
-th, td {
-  border: 1px solid #aaa;
-  padding: 8px;
-  text-align: left;
-}
+<!-- Ganti bagian setInterval dan renderTasks menjadi seperti ini -->
+<script>
+  // renderTasks() hanya dipanggil sekali
+  renderTasks();
 
-  </style>
-</head>
-<body>
-  <h2>Antrian Pekerjaan (10 Track)</h2>
-  <div id="taskList"></div>
-  <h3>Pekerjaan Selesai</h3>
-  <table id="doneTable">
-    <thead>
-      <tr><th>Nama</th><th>Mulai</th><th>Selesai</th><th>Waktu Selesai</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-  <button onclick="exportCSV()">Export CSV</button>  <script>
-    const taskList = document.getElementById('taskList');
-    const doneTable = document.querySelector('#doneTable tbody');
+  function updateAlerts() {
+    const nowStr = new Date().toTimeString().slice(0, 5);
+    document.querySelectorAll('.task').forEach(el => {
+      const id = +el.dataset.id;
+      const task = tasks.find(t => t.id === id);
+      el.classList.remove('alert');
+      if (task && (task.startTime === nowStr || task.endTime === nowStr)) {
+        el.classList.add('alert');
+      }
+    });
 
-    const tasks = Array.from({ length: 10 }, (_, i) => ({
-      id: i + 1,
-      name: `Pekerjaan ${i + 1}`,
-      startTime: "08:00",
-      endTime: "12:00",
-      done: false,
-      shifted: false,
-      doneAt: null
-    }));
+    // update waktu selesai jika dicentang sekarang
+    tasks.forEach(task => {
+      if (task.done && !task.doneAt) {
+        task.doneAt = new Date().toLocaleTimeString();
+        renderDoneTable();
+      }
+    });
+  }
 
-    function createTaskElement(task) {
+  function renderTasks() {
+    taskList.innerHTML = '';
+    tasks.forEach(task => {
       const div = document.createElement('div');
       div.className = 'task';
+      div.dataset.id = task.id;
       if (task.done) div.classList.add('done');
       if (task.shifted) div.classList.add('shifted');
-
-      const now = new Date();
-      const nowStr = now.toTimeString().slice(0, 5);
-      if (nowStr === task.startTime || nowStr === task.endTime) {
-        div.classList.add('alert');
-      }
 
       div.innerHTML = `
         <div class="left">
@@ -121,58 +42,19 @@ th, td {
           <label><input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleDone(${task.id})"> Selesai</label>
           <button class="shift-btn" onclick="shiftTask(${task.id})">Geser Kiri</button>
         </div>`;
+      taskList.appendChild(div);
+    });
+    renderDoneTable();
+  }
 
-      return div;
-    }
+  function renderDoneTable() {
+    doneTable.innerHTML = '';
+    tasks.filter(t => t.done).forEach(task => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${task.name}</td><td>${task.startTime}</td><td>${task.endTime}</td><td>${task.doneAt || '-'}</td>`;
+      doneTable.appendChild(tr);
+    });
+  }
 
-    function renderTasks() {
-      taskList.innerHTML = '';
-      tasks.forEach(task => taskList.appendChild(createTaskElement(task)));
-
-      doneTable.innerHTML = '';
-      tasks.filter(t => t.done).forEach(task => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${task.name}</td><td>${task.startTime}</td><td>${task.endTime}</td><td>${task.doneAt || '-'}</td>`;
-        doneTable.appendChild(tr);
-      });
-    }
-
-    function updateTask(id, key, value) {
-      const task = tasks.find(t => t.id === id);
-      if (task) task[key] = value;
-    }
-
-    function toggleDone(id) {
-      const task = tasks.find(t => t.id === id);
-      if (task) {
-        task.done = !task.done;
-        task.doneAt = task.done ? new Date().toLocaleTimeString() : null;
-        if (!task.done) task.shifted = false;
-      }
-    }
-
-    function shiftTask(id) {
-      const task = tasks.find(t => t.id === id);
-      if (task && task.done) {
-        task.shifted = true;
-      }
-    }
-
-    function exportCSV() {
-      const header = ['Nama', 'Mulai', 'Selesai', 'Waktu Selesai'];
-      const rows = tasks.filter(t => t.done).map(t => [t.name, t.startTime, t.endTime, t.doneAt]);
-      let csv = [header, ...rows].map(row => row.join(",")).join("\n");
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'pekerjaan_selesai.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    setInterval(renderTasks, 1000); // update realtime tiap 1 detik
-    renderTasks();
-  </script></body>
-</html>
+  setInterval(updateAlerts, 1000); // hanya update alert tiap detik
+</script>
