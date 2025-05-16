@@ -1,196 +1,31 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Antrian Pekerjaan</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#ffffff">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta charset="UTF-8">
+  <title>Halaman Utama</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 { text-align: center; }
-    .task {
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: transform 0.3s ease, background-color 0.5s ease;
-      position: relative;
-    }
-    .task.done {
-      background-color: #d1ffd1;
-      text-decoration: line-through;
-    }
-    .task.shifted { transform: translateX(-50px); }
-    .task.alert { background-color: #ffdddd; }
-    .left { flex-grow: 1; }
-    .right {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    input[type="text"], input[type="time"] {
-      border: none;
-      background: transparent;
-      width: 100px;
-    }
-    input:focus {
-      background: #eef;
-      outline: none;
-    }
-    .shift-btn {
-      display: none;
-      background: #555;
+    body { font-family: sans-serif; background: #f2f2f2; padding: 40px; }
+    h1 { text-align: center; }
+    ul { max-width: 400px; margin: auto; padding: 0; list-style: none; }
+    li { margin: 10px 0; }
+    a {
+      display: block;
+      background: #333;
       color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 5px;
-      cursor: pointer;
+      text-decoration: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: 0.3s;
     }
-    .task.done .shift-btn {
-      display: inline-block;
-    }
-    table {
-      width: 100%;
-      margin-top: 30px;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid #aaa;
-      padding: 8px;
-      text-align: left;
-    }
+    a:hover { background: #555; }
   </style>
 </head>
 <body>
-  <h2>Antrian Pekerjaan (10 Track)</h2>
-  <div id="taskList"></div>
-  <h3>Pekerjaan Selesai</h3>
-  <table id="doneTable">
-    <thead>
-      <tr><th>Nama</th><th>Mulai</th><th>Selesai</th><th>Waktu Selesai</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-  <button onclick="exportCSV()">Export CSV</button>
-
-  <script>
-    const taskList = document.getElementById('taskList');
-    const doneTable = document.querySelector('#doneTable tbody');
-
-    const tasks = Array.from({ length: 10 }, (_, i) => ({
-      id: i + 1,
-      name: `Pekerjaan ${i + 1}`,
-      startTime: "08:00",
-      endTime: "12:00",
-      done: false,
-      shifted: false,
-      doneAt: null
-    }));
-
-    function createTaskElement(task) {
-      const div = document.createElement('div');
-      div.className = 'task';
-      div.dataset.id = task.id;
-      if (task.done) div.classList.add('done');
-      if (task.shifted) div.classList.add('shifted');
-
-      div.innerHTML = `
-        <div class="left">
-          <input type="text" value="${task.name}" oninput="updateTask(${task.id}, 'name', this.value)">
-        </div>
-        <div class="right">
-          <input type="time" value="${task.startTime}" oninput="updateTask(${task.id}, 'startTime', this.value)">
-          <input type="time" value="${task.endTime}" oninput="updateTask(${task.id}, 'endTime', this.value)">
-          <label><input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleDone(${task.id})"> Selesai</label>
-          <button class="shift-btn" onclick="shiftTask(${task.id})">Geser Kiri</button>
-        </div>`;
-      return div;
-    }
-
-    function renderTasks() {
-      taskList.innerHTML = '';
-      tasks.forEach(task => taskList.appendChild(createTaskElement(task)));
-      renderDoneTable();
-    }
-
-    function renderDoneTable() {
-      doneTable.innerHTML = '';
-      tasks.filter(t => t.done).forEach(task => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${task.name}</td><td>${task.startTime}</td><td>${task.endTime}</td><td>${task.doneAt || '-'}</td>`;
-        doneTable.appendChild(tr);
-      });
-    }
-
-    function updateTask(id, key, value) {
-      const task = tasks.find(t => t.id === id);
-      if (task) task[key] = value;
-    }
-
-    function toggleDone(id) {
-      const task = tasks.find(t => t.id === id);
-      if (task) {
-        task.done = !task.done;
-        if (task.done && !task.doneAt) task.doneAt = new Date().toLocaleTimeString();
-        if (!task.done) {
-          task.doneAt = null;
-          task.shifted = false;
-        }
-        renderDoneTable();
-      }
-    }
-
-    function shiftTask(id) {
-      const task = tasks.find(t => t.id === id);
-      if (task && task.done) task.shifted = true;
-    }
-
-    function exportCSV() {
-      const header = ['Nama', 'Mulai', 'Selesai', 'Waktu Selesai'];
-      const rows = tasks.filter(t => t.done).map(t => [t.name, t.startTime, t.endTime, t.doneAt]);
-      let csv = [header, ...rows].map(row => row.join(",")).join("\n");
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'pekerjaan_selesai.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function updateAlerts() {
-      const nowStr = new Date().toTimeString().slice(0, 5);
-      document.querySelectorAll('.task').forEach(el => {
-        const id = +el.dataset.id;
-        const task = tasks.find(t => t.id === id);
-        el.classList.remove('alert');
-        if (task && (task.startTime === nowStr || task.endTime === nowStr)) {
-          el.classList.add('alert');
-        }
-      });
-    }
-
-    renderTasks();
-    setInterval(updateAlerts, 1000);
-
-    // PWA service worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js');
-      });
-    }
-  </script>
+  <h1>Selamat Datang</h1>
+  <ul>
+    <li><a href="tugas.html">Tugas</a></li>
+    <li><a href="laporan.html">Laporan</a></li>
+    <li><a href="lainnya.html">Halaman Lain</a></li>
+  </ul>
 </body>
 </html>
